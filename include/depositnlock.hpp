@@ -26,6 +26,7 @@ public:
    [[eosio::on_notify("tokenfactory::transfer")]] 
    void deposit(name from, name to, asset quantity, std::string memo);
 
+   ACTION withdraw(name onwer, asset quantity, std::string memo);
    
 private:
    TABLE deposit_st
@@ -37,6 +38,6 @@ private:
    };
 
    typedef multi_index<name("deposits"), deposit_st> deposits;
-   deposits _deposits;
+   deposits _deposits;  // has issue with erase operation
 
 };
