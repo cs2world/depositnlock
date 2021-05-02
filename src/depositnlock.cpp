@@ -14,6 +14,7 @@ void depositnlock::deposit(name from, name to, asset quantity, std::string memo)
    {
       _deposits.modify(itr, same_payer, [&](auto &s) {
          s.balance += quantity;
+         s.deposit_tp = current_time_point(); // define as new time
       });
    }
    else
@@ -21,10 +22,41 @@ void depositnlock::deposit(name from, name to, asset quantity, std::string memo)
       _deposits.emplace(get_self(), [&](auto &s) {
          s.owner = from;
          s.balance = quantity;
+         s.deposit_tp = current_time_point();
       });
    }
-
 }
+
+
+ACTION depositnlock::set( name user, uint64_t value ) {
+   check( has_auth(get_self()), "You need permission to set the singleton.");
+   check( get_self() == user, "Only the contractor owner can set the singleton.");
+   
+   auto entry_stored = singleton_instance.get_or_create(user, testtablerow);
+   entry_stored.primary_value = user;
+   entry_stored.minutes_to_wait = value;
+   singleton_instance.set(entry_stored, user);
+}
+
+ACTION depositnlock::get( ) {
+   if (singleton_instance.exists())
+      eosio::print(
+         "Minutes to wait after depsoit to: ", 
+         name{singleton_instance.get().primary_value.value},
+         " is ",
+         singleton_instance.get().minutes_to_wait,
+         ", then you can withdraw.\n");
+   else
+      eosio::print("Singleton is empty\n");
+}
+
+uint64_t depositnlock::get_value( ){
+   if (singleton_instance.exists())
+      return singleton_instance.get().minutes_to_wait;
+   else
+      return 0; // no need to wait
+} 
+   
 
 ACTION depositnlock::withdraw(name owner, asset quantity, std::string memo){
    check( has_auth(owner), "You need permission to withdraw.");
@@ -35,6 +67,10 @@ ACTION depositnlock::withdraw(name owner, asset quantity, std::string memo){
    auto itr = _deposits.find( owner.value );
    check(itr != _deposits.end(), "Are you sure you have deposit with us?");
    check( itr->balance >= quantity, " You seems to withdraw too much. ");
+
+   uint64_t m = get_value();
+   eosio::print("time to wait is ", m, " minute(s).\n");
+   check( (itr->deposit_tp + (time_point)minutes(m) ) < current_time_point() ,"you can withdraw only after minimum stake time.");
 
    if( itr->balance == quantity ) { // balance is 0 ***
       _deposits.erase( itr ); // remove the 0 balance records
@@ -52,7 +88,7 @@ ACTION depositnlock::withdraw(name owner, asset quantity, std::string memo){
    
    action{
       permission_level{ get_self(), "active"_n },
-      "tokenfactory"_n,
+      name("tokenfactory"),
       "transfer"_n,
       std::make_tuple( get_self(), owner, quantity, memo )
    }.send();
