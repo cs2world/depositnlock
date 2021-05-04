@@ -31,12 +31,12 @@ public:
    uint64_t get_value( );
 
 private:
-   TABLE testtable {
+   TABLE settings {
       name primary_value;
       uint64_t minutes_to_wait;
-   } testtablerow;
+   } settingsrow;
 
-   using singleton_type = eosio::singleton<"testtable"_n, testtable>;
+   using singleton_type = eosio::singleton<"settings"_n, settings>;
    singleton_type singleton_instance;
 
    TABLE deposit_st

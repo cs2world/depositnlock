@@ -32,7 +32,7 @@ ACTION depositnlock::set( name user, uint64_t value ) {
    check( has_auth(get_self()), "You need permission to set the singleton.");
    check( get_self() == user, "Only the contractor owner can set the singleton.");
    
-   auto entry_stored = singleton_instance.get_or_create(user, testtablerow);
+   auto entry_stored = singleton_instance.get_or_create(user, settingsrow);
    entry_stored.primary_value = user;
    entry_stored.minutes_to_wait = value;
    singleton_instance.set(entry_stored, user);
